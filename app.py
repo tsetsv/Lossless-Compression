@@ -3,13 +3,19 @@ from flask_cors import CORS
 from PIL import Image, UnidentifiedImageError
 import io
 import base64
+import matplotlib
+matplotlib.use('Agg')  # Use non-GUI backend
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from urllib.parse import quote as url_quote
-
 
 app = Flask(__name__)
 CORS(app)
+
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
 
 @app.route('/compress', methods=['POST'])
 def compress():
@@ -232,13 +238,6 @@ def arithmetic_coding(data):
     
     return str(arithmetic_code), extra_info
 
-import base64
-import io
-from PIL import Image
-import numpy as np
-import matplotlib.pyplot as plt
-import os
-
 def lossless_jpeg(data):
     extra_info = "Lossless JPEG нь зургийг чанарыг нь алдалгүйгээр багасгах шахалтын арга\n\n"
     extra_info += "1 Зургийг өнгөний тусдаа давхаргуудад хуваадаг (гэрэл, өнгөний бүрдэл)\n"
@@ -267,7 +266,7 @@ def lossless_jpeg(data):
             ratio = round(original_size / compressed_size, 2)
             extra_info += f"Шахалт: {original_size} байтаас → {compressed_size} байт (~{ratio}:1 харьцаа)\n"
 
-            # Show images
+            # Create comparison image instead of showing
             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
             axes[0].imshow(np.array(img))
             axes[0].set_title("Эх зураг")
@@ -278,8 +277,15 @@ def lossless_jpeg(data):
             axes[1].axis('off')
 
             plt.tight_layout()
-            plt.show()
-
+            
+            # Instead of plt.show(), save to base64
+            img_buffer = io.BytesIO()
+            plt.savefig(img_buffer, format='png')
+            img_buffer.seek(0)
+            img_data = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
+            plt.close(fig)  # Important: close the figure to free memory
+            
+            extra_info += f"<img_data>{img_data}</img_data>"
             compressed = "Шахалт амжилттай хийгдлээ."
         else:
             extra_info += "Энэ формат нь зураг биш байна. Base64 зураг оруулна уу.\n"
@@ -292,4 +298,5 @@ def lossless_jpeg(data):
     return compressed, extra_info
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
