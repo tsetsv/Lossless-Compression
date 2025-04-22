@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="mn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lossless Compression Tool</title>
+    <link rel="website icon" type="png" href="1f469-1f4bb.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <h1>✨ ШАХАЛТЫН АЛГОРИТМ ТУРШИГЧ ✨</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="main-section">
+            <div class="card">
+                <h2>Өгөгдөл оруулах</h2>
+                <form id="compressionForm">
+                    <div class="input-area">
+                        <div class="input-group">
+                            <label for="inputData">Текст:</label>
+                            <textarea id="inputData" placeholder="Шахахыг хүссэн текстээ энд бичнэ үү..."></textarea>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="inputFile">Эсвэл зураг оруулах:</label>
+                            <div class="file-upload">
+                                <div class="icon">📁</div>
+                                <p>Энд дарж файл сонгоно уу</p>
+                                <p style="font-size: 14px; opacity: 0.7;">(Зөвхөн зураг: JPEG, PNG г.м)</p>
+                                <span class="file-name" id="fileName"></span>
+                                <input type="file" id="inputFile">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="algorithm">Шахалтын алгоритм:</label>
+                            <select id="algorithm">
+                                <option value="runlength">Run-Length Encoding</option>
+                                <option value="huffman">Huffman Coding</option>
+                                <option value="lempelziv">Lempel-Ziv78</option>
+                                <option value="arithmetic">Arithmetic Coding</option>
+                                <option value="jpeg">Lossless JPEG</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-full pulse">
+                        <span>Шахалтыг эхлүүлэх</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"></path>
+                            <path d="m12 5 7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+
+            <div class="card" id="output">
+                <h2>Шахалтын үр дүн</h2>
+                <div id="result">
+                    <p style="text-align: center; margin: 40px 0; color: var(--gray);">Өгөгдөл оруулж, шахалтыг эхлүүлнэ үү.</p>
+                </div>
+                <div class="loader" id="loader"></div>
+                <div class="result-area" id="resultArea" style="display: none;">
+                    <div class="algorithm-badge" id="algorithmBadge">Run-Length Encoding</div>
+                    <div class="result-container" id="resultContainer"></div>
+                    
+                    <div class="result-stats" id="resultStats">
+                        <div class="stat-card">
+                            <div class="value" id="originalSize">0</div>
+                            <div class="label">Анхны хэмжээ (bytes)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="compressedSize">0</div>
+                            <div class="label">Шахсаны дараах (bytes)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="ratio">0</div>
+                            <div class="label">Шахалтын харьцаа</div>
+                        </div>
+                    </div>
+
+                    <div class="tree-visualization" id="treeVisualization" style="display: none;">
+                        <h3 style="margin-bottom: 15px; color: var(--primary-dark);">Кодлолын мод:</h3>
+                        <div class="tree-container">
+                            <pre id="treeContent"></pre>
+                        </div>
+                    </div>
+
+                    <div class="explanation-section" id="explanationSection" style="display: none;">
+                        <button class="explanation-toggle" id="explanationToggle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 16v-4"></path>
+                                <path d="M12 8h.01"></path>
+                            </svg>
+                            <span>Алгоритмын тайлбар харах</span>
+                        </button>
+                        <div class="explanation-content" id="explanationContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2025 Lossless Compression | Бүх эрх Цэцээгээр хамгаалагдсан</p>
+    </footer>
+
+    <script>
+        document.getElementById('inputFile').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : '';
+            const fileNameEl = document.getElementById('fileName');
+            
+            if (fileName) {
+                fileNameEl.textContent = fileName;
+                fileNameEl.style.display = 'block';
+            } else {
+                fileNameEl.style.display = 'none';
+            }
+        });
+
+        document.getElementById('explanationToggle').addEventListener('click', function() {
+            const explanationContent = document.getElementById('explanationContent');
+            const isVisible = explanationContent.style.display === 'block';
+            
+            explanationContent.style.display = isVisible ? 'none' : 'block';
+            this.querySelector('span').textContent = isVisible 
+                ? 'Алгоритмын тайлбар харах' 
+                : 'Алгоритмын тайлбар хаах';
+        });
+
+        document.getElementById('compressionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const inputData = document.getElementById('inputData').value;
+            const inputFile = document.getElementById('inputFile').files[0];
+            const algorithm = document.getElementById('algorithm').value;
+            const algorithmName = document.getElementById('algorithm').options[document.getElementById('algorithm').selectedIndex].text;
+
+            let data = inputData;
+            let inputSize = 0;
+
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+
+            if (inputData && inputFile) {
+                showAlert('Та зөвхөн текст эсвэл зургийн аль нэгийг оруулна уу.', 'error');
+                document.getElementById('loader').style.display = 'none';
+                return;
+            } else if (inputData) {
+                data = inputData;
+                inputSize = new Blob([data]).size;
+            } else if (inputFile) {
+                const fileType = inputFile.type;
+
+                if (!fileType.startsWith("image/")) {
+                    showAlert('Зөвхөн зураг оруулна уу (JPEG, PNG гэх мэт).', 'error');
+                    document.getElementById('loader').style.display = 'none';
+                    return;
+                }
+
+                const reader = new FileReader();
+                try {
+                    data = await new Promise((resolve, reject) => {
+                        reader.onload = () => resolve(reader.result.split(",")[1]); // Base64 encoded data
+                        reader.onerror = () => reject("Зургийг уншиж чадсангүй.");
+                        reader.readAsDataURL(inputFile);
+                    });
+                } catch (error) {
+                    showAlert(error, 'error');
+                    document.getElementById('loader').style.display = 'none';
+                    return;
+                }
+
+                inputSize = inputFile.size;
+            } else {
+                showAlert('Та текст эсвэл зураг оруулна уу.', 'error');
+                document.getElementById('loader').style.display = 'none';
+                return;
+            }
+
+            try {
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = '';
+                document.getElementById('resultArea').style.display = 'none';
+                document.getElementById('loader').style.display = 'block';
+                
+                const response = await fetch('http://127.0.0.1:5000/compress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data, algorithm }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('resultArea').style.display = 'block';
+                
+                document.getElementById('algorithmBadge').textContent = algorithmName;
+                
+                document.getElementById('resultContainer').textContent = result.compressed;
+                
+                document.getElementById('originalSize').textContent = inputSize;
+                document.getElementById('compressedSize').textContent = new Blob([result.compressed]).size;
+                const compressionRatio = (inputSize / new Blob([result.compressed]).size).toFixed(2);
+                document.getElementById('ratio').textContent = compressionRatio + 'x';
+                
+                if (result.tree) {
+                    document.getElementById('treeVisualization').style.display = 'block';
+                    document.getElementById('treeContent').textContent = JSON.stringify(result.tree, null, 2);
+                } else {
+                    document.getElementById('treeVisualization').style.display = 'none';
+                }
+                
+                if (result.extra_info) {
+                    document.getElementById('explanationSection').style.display = 'block';
+                    document.getElementById('explanationContent').textContent = result.extra_info;
+                } else {
+                    document.getElementById('explanationSection').style.display = 'none';
+                }
+
+            } catch (error) {
+                document.getElementById('loader').style.display = 'none';
+                showAlert(`Алдаа гарлаа: ${error.message}`, 'error');
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    ${type === 'error' 
+                        ? '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>'
+                        : '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>'}
+                </svg>
+                ${message}
+            `;
+            
+            const result = document.getElementById('result');
+            result.innerHTML = '';
+            result.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (result.contains(alertDiv)) {
+                    result.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+
+</html>
