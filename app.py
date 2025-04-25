@@ -91,18 +91,22 @@ def huffman_coding(data):
         lo = heappop(heap)
         hi = heappop(heap)
         
-        extra_info += f"Хослол:\n"
-        extra_info += f"\t{lo[0]} давталттай зангилаа: "
+        extra_info += f"\nХослол:\n"
+        extra_info += f"\t{lo[0]} давталттай "
         
         for pair in lo[1:]:
             extra_info += f"'{pair[1]}' замтай {pair[0]}, "
         extra_info = extra_info.rstrip(", ") + "\n"
         
-        extra_info += f"\t{hi[0]} давталттай зангилаа: "
+        extra_info += f"\t{hi[0]} давталттай "
        
         for pair in hi[1:]:
             extra_info += f"'{pair[1]}' замтай {pair[0]}, "
         extra_info = extra_info.rstrip(", ") + "\n"
+
+         # Combine the nodes
+        combined = [lo[0] + hi[0]] + lo[1:] + hi[1:]
+        extra_info += f"\n\tЭдгээр нь нийлээд {combined[0]} давталттай зангилаа болно.\n\n"
         
         for pair in lo[1:]:
             extra_info += f"\t{pair[0]}-ийн шинэ зам 0{pair[1]}\n"
@@ -112,13 +116,10 @@ def huffman_coding(data):
             extra_info += f"\t{pair[0]}-ийн шинэ зам 1{pair[1]}\n"
             pair[1] = "1" + pair[1]
         
-        # Combine the nodes
-        combined = [lo[0] + hi[0]] + lo[1:] + hi[1:]
-        extra_info += f"\tНэгтгэсэн зангилаа: Давталт {combined[0]}\n\n"
         heappush(heap, combined)
 
     huffman_tree = sorted(heappop(heap)[1:], key=lambda p: (len(p[-1]), p))
-    extra_info += "\n3. Тэмдэгт бүрийн хоёрт кодчилол:\n"
+    extra_info += "\n\n3. Тэмдэгт бүрийн хоёрт кодчилол:\n"
     
     for pair in huffman_tree:
         extra_info += f"{pair[0]}: {pair[1]}\n"

@@ -41,6 +41,7 @@
                                 <p style="font-size: 14px; opacity: 0.7;">(Зөвхөн зураг: JPEG, PNG г.м)</p>
                                 <span class="file-name" id="fileName"></span>
                                 <input type="file" id="inputFile">
+                                <button type="button" class="remove-file" style="display: none;" onclick="clearfile()">Цэвэрлэх</button>
                             </div>
                         </div>
 
@@ -122,14 +123,28 @@
         document.getElementById('inputFile').addEventListener('change', function(e) {
             const fileName = e.target.files[0] ? e.target.files[0].name : '';
             const fileNameEl = document.getElementById('fileName');
+            const removeButton = document.querySelector(".remove-file");
             
             if (fileName) {
                 fileNameEl.textContent = fileName;
                 fileNameEl.style.display = 'block';
+                removeButton.style.display = 'inline-block';
             } else {
                 fileNameEl.style.display = 'none';
+                removeButton.style.display = 'none'
             }
         });
+
+        function clearfile() {
+            const fileInput = document.getElementById('inputFile');
+            const fileNameEl = document.getElementById('fileName');
+            const removeButton = document.querySelector(".remove-file");
+
+            fileInput.value = '';
+            fileNameEl.textContent = '';
+            fileNameEl.style.display = 'none';
+            removeButton.style.display = 'none'; // Буцаагаад товчийг нуух
+        }
 
         document.getElementById('explanationToggle').addEventListener('click', function() {
             const explanationContent = document.getElementById('explanationContent');

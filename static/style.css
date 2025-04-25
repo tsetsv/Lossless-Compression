@@ -395,3 +395,25 @@ footer {
 .pulse {
     animation: pulse 2s infinite;
 }
+
+.remove-file {
+    padding: 6px 20px;
+    background-color: rgb(195, 195, 195);
+    color: rgb(255, 255, 255);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+    z-index: 1;
+}
+.remove-file:hover {
+    background-color: #919191;
+    transform: translateY(-1px);
+}
