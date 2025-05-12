@@ -11,7 +11,80 @@
     <link rel="stylesheet" href="/static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        /* Huffman Tree Visualization Styles */
+        .tree-visualization-container {
+            width: 100%;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 25px;
+            overflow: hidden;
+        }
         
+        .tree-visualization-svg {
+            width: 100%;
+            height: 500px;
+            background-color: #edf2ff;
+            border-radius: 5px;
+            overflow: auto;
+        }
+        
+        /* Node and link styles for the tree */
+        .node {
+            cursor: pointer;
+        }
+        
+        .node circle {
+            fill: white;
+            stroke: none;
+        }
+        
+        .node.leaf circle {
+            fill: #5B5EFA;
+        }
+        
+        .node text {
+            font-family: sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .link {
+            fill: none;
+            stroke: white;
+            stroke-width: 2px;
+        }
+        
+        /* Huffman codes table */
+        .codes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .codes-table th, .codes-table td {
+            padding: 8px 16px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .codes-table th {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .codes-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .tree-title {
+            margin: 25px 0 15px 0;
+            color: var(--primary-dark);
+            text-align: center;
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -92,6 +165,26 @@
                         </div>
                     </div>
 
+                    <!-- Huffman codes table -->
+                    <div id="huffmanCodesTable" style="display: none; margin-top: 25px;">
+                        <h3 class="tree-title">Huffman Кодууд</h3>
+                        <table class="codes-table" id="codesTableBody">
+                            <thead>
+                                <tr>
+                                    <th>Тэмдэгт</th>
+                                    <th>Код</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Huffman tree visualization -->
+                    <div id="huffmanTreeVisualization" style="display: none;" class="tree-visualization-container">
+                        <h3 class="tree-title">Huffman Модны Зураглал</h3>
+                        <div class="tree-visualization-svg" id="treeVisualizationSvg"></div>
+                    </div>
+
                     <div class="tree-visualization" id="treeVisualization" style="display: none;">
                         <h3 style="margin-bottom: 15px; color: var(--primary-dark);">Кодлолын мод:</h3>
                         <div class="tree-container">
@@ -119,7 +212,273 @@
         <p>© 2025 Lossless Compression | Бүх эрх Цэцээгээр хамгаалагдсан</p>
     </footer>
 
+    <!-- D3.js script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    
     <script>
+        // Huffman class and node implementation
+        class HuffmanNode {
+            constructor(char, freq) {
+                this.char = char;
+                this.freq = freq;
+                this.left = null;
+                this.right = null;
+            }
+        }
+        
+        class HuffmanTree {
+            constructor() {
+                this.heap = [];
+                this.codes = {};
+                this.freqMap = {};
+            }
+            
+            // Add element to heap
+            push(node) {
+                this.heap.push(node);
+                this.siftUp(this.heap.length - 1);
+            }
+            
+            // Get smallest element from heap
+            pop() {
+                const result = this.heap[0];
+                const end = this.heap.pop();
+                
+                if (this.heap.length > 0) {
+                    this.heap[0] = end;
+                    this.siftDown(0);
+                }
+                
+                return result;
+            }
+            
+            // Heap size
+            size() {
+                return this.heap.length;
+            }
+            
+            // Move element up
+            siftUp(idx) {
+                const element = this.heap[idx];
+                while (idx > 0) {
+                    const parentIdx = Math.floor((idx - 1) / 2);
+                    const parent = this.heap[parentIdx];
+                    
+                    if (parent.freq <= element.freq) break;
+                    
+                    this.heap[parentIdx] = element;
+                    this.heap[idx] = parent;
+                    idx = parentIdx;
+                }
+            }
+            
+            // Move element down
+            siftDown(idx) {
+                const length = this.heap.length;
+                const element = this.heap[idx];
+                let childIdx = null;
+                
+                while ((childIdx = (2 * idx) + 1) < length) {
+                    // Left child
+                    let child = this.heap[childIdx];
+                    
+                    // Compare with right child
+                    if (childIdx + 1 < length && this.heap[childIdx + 1].freq < child.freq) {
+                        childIdx = childIdx + 1;
+                        child = this.heap[childIdx];
+                    }
+                    
+                    if (element.freq <= child.freq) break;
+                    
+                    this.heap[idx] = child;
+                    this.heap[childIdx] = element;
+                    idx = childIdx;
+                }
+            }
+            
+            // Create frequency map
+            buildFrequencyMap(text) {
+                this.freqMap = {};
+                for (let char of text) {
+                    if (!this.freqMap[char]) {
+                        this.freqMap[char] = 0;
+                    }
+                    this.freqMap[char]++;
+                }
+            }
+            
+            // Build Huffman tree
+            buildHuffmanTree(text) {
+                this.buildFrequencyMap(text);
+                
+                // Clear heap
+                this.heap = [];
+                this.codes = {};
+                
+                // Add each node to heap
+                for (let char in this.freqMap) {
+                    this.push(new HuffmanNode(char, this.freqMap[char]));
+                }
+                
+                // If only one character
+                if (this.size() === 1) {
+                    const node = this.pop();
+                    const newNode = new HuffmanNode(null, node.freq);
+                    newNode.left = node;
+                    return newNode;
+                }
+                
+                // Build the tree
+                while (this.size() > 1) {
+                    const left = this.pop();
+                    const right = this.pop();
+                    
+                    const newNode = new HuffmanNode(null, left.freq + right.freq);
+                    newNode.left = left;
+                    newNode.right = right;
+                    
+                    this.push(newNode);
+                }
+                
+                // Final tree
+                return this.size() > 0 ? this.heap[0] : null;
+            }
+            
+            // Recursively assign codes
+            generateCodes(node, code = "") {
+                if (node) {
+                    if (node.char !== null) {
+                        this.codes[node.char] = code;
+                    }
+                    
+                    this.generateCodes(node.left, code + "0");
+                    this.generateCodes(node.right, code + "1");
+                }
+            }
+            
+            // Encode text
+            encodeText(text) {
+                let encoded = "";
+                for (let char of text) {
+                    encoded += this.codes[char];
+                }
+                return encoded;
+            }
+            
+            // Recursively convert tree to JSON
+            convertToJSON(node, nodeId = 0) {
+                if (!node) return [null, nodeId];
+                
+                const result = {
+                    id: nodeId,
+                    value: node.char !== null ? node.char : "",
+                    freq: node.freq,
+                    isLeaf: node.char !== null,
+                    children: []
+                };
+                
+                let nextId = nodeId + 1;
+                
+                if (node.left) {
+                    const [leftResult, leftNextId] = this.convertToJSON(node.left, nextId);
+                    result.children.push(leftResult);
+                    nextId = leftNextId;
+                }
+                
+                if (node.right) {
+                    const [rightResult, rightNextId] = this.convertToJSON(node.right, nextId);
+                    result.children.push(rightResult);
+                    nextId = rightNextId;
+                }
+                
+                return [result, nextId];
+            }
+        }
+        
+        // Function to render the Huffman tree visualization
+        function renderHuffmanTree(treeData) {
+            // Clear previous SVG
+            document.getElementById('treeVisualizationSvg').innerHTML = '';
+            
+            // Get container dimensions
+            const containerWidth = document.getElementById('treeVisualizationSvg').clientWidth;
+            const containerHeight = document.getElementById('treeVisualizationSvg').clientHeight;
+            
+            // Create SVG element
+            const svg = d3.select('#treeVisualizationSvg').append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
+                .append('g')
+                .attr('transform', `translate(0, 40)`);
+            
+            // Create hierarchy from tree data
+            const hierarchy = d3.hierarchy(treeData);
+            
+            // Create tree layout
+            const treeLayout = d3.tree()
+                .size([containerWidth - 100, containerHeight - 80]);
+            
+            // Apply layout to hierarchy
+            const treeData2 = treeLayout(hierarchy);
+            
+            // Draw links
+            svg.selectAll('.link')
+                .data(treeData2.links())
+                .enter().append('path')
+                .attr('class', 'link')
+                .attr('d', d3.linkVertical()
+                    .x(d => d.x)
+                    .y(d => d.y));
+            
+            // Draw nodes
+            const nodes = svg.selectAll('.node')
+                .data(treeData2.descendants())
+                .enter().append('g')
+                .attr('class', d => `node ${d.data.isLeaf ? 'leaf' : ''}`)
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+            
+            // Add circles to nodes
+            nodes.append('circle')
+                .attr('r', 30);
+            
+            // Add text to nodes (character or frequency)
+            nodes.append('text')
+                .attr('dy', '0.35em')
+                .attr('text-anchor', 'middle')
+                .text(d => {
+                    if (d.data.value && d.data.value !== " ") {
+                        return d.data.value;
+                    } else if (d.data.value === " ") {
+                        return "space";
+                    } else {
+                        return d.data.freq;
+                    }
+                })
+                .attr('fill', 'black');
+        }
+
+        // Function to create Huffman codes table
+        function createHuffmanCodesTable(codes) {
+            const tableBody = document.querySelector('#codesTableBody tbody');
+            tableBody.innerHTML = '';
+            
+            for (let char in codes) {
+                const row = document.createElement('tr');
+                
+                const charCell = document.createElement('td');
+                charCell.textContent = char === ' ' ? '"хоосон зай"' : char;
+                
+                const codeCell = document.createElement('td');
+                codeCell.textContent = codes[char];
+                
+                row.appendChild(charCell);
+                row.appendChild(codeCell);
+                tableBody.appendChild(row);
+            }
+        }
+
+        // Event Listeners
         document.getElementById('inputFile').addEventListener('change', function(e) {
             const fileName = e.target.files[0] ? e.target.files[0].name : '';
             const fileNameEl = document.getElementById('fileName');
@@ -143,7 +502,7 @@
             fileInput.value = '';
             fileNameEl.textContent = '';
             fileNameEl.style.display = 'none';
-            removeButton.style.display = 'none'; // Буцаагаад товчийг нуух
+            removeButton.style.display = 'none';
         }
 
         document.getElementById('explanationToggle').addEventListener('click', function() {
@@ -166,6 +525,10 @@
 
             let data = inputData;
             let inputSize = 0;
+            
+            // Hide visualization elements
+            document.getElementById('huffmanCodesTable').style.display = 'none';
+            document.getElementById('huffmanTreeVisualization').style.display = 'none';
 
             document.getElementById('result').innerHTML = '';
             document.getElementById('resultArea').style.display = 'none';
@@ -237,6 +600,29 @@
                 const compressionRatio = (inputSize / new Blob([result.compressed]).size).toFixed(2);
                 document.getElementById('ratio').textContent = compressionRatio + 'x';
                 
+                 // Handle Huffman visualization if algorithm is Huffman and input is text
+                if (algorithm === 'huffman' && inputData) {
+                    // Create Huffman tree for visualization
+                    const huffman = new HuffmanTree();
+                    const root = huffman.buildHuffmanTree(inputData);
+                    huffman.generateCodes(root);
+                    
+                    // Generate codes table
+                    createHuffmanCodesTable(huffman.codes);
+                    document.getElementById('huffmanCodesTable').style.display = 'block';
+                    
+                    // Generate tree visualization
+                    const [treeJson, _] = huffman.convertToJSON(root);
+                    document.getElementById('huffmanTreeVisualization').style.display = 'block';
+                    
+                    // Чухал засвар: setTimeout ашиглан модыг хойшлуулан зурах
+                    setTimeout(() => {
+                        renderHuffmanTree(treeJson);
+                        // Backup: Шаардлагатай бол д3-д мэдэгдэх
+                        window.dispatchEvent(new Event('resize'));
+                    }, 100);
+                }
+                
                 if (result.tree) {
                     document.getElementById('treeVisualization').style.display = 'block';
                     document.getElementById('treeContent').textContent = JSON.stringify(result.tree, null, 2);
@@ -257,6 +643,33 @@
             }
         });
 
+
+        // Мөн энэ DOMContentLoaded хэсгийг нэмж оруулах
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fix initial SVG rendering
+            const observer = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    if (entry.target.id === 'treeVisualizationSvg') {
+                        const algorithm = document.getElementById('algorithm').value;
+                        const inputData = document.getElementById('inputData').value;
+                        
+                        if (algorithm === 'huffman' && inputData && 
+                            document.getElementById('huffmanTreeVisualization').style.display !== 'none') {
+                            
+                            const huffman = new HuffmanTree();
+                            const root = huffman.buildHuffmanTree(inputData);
+                            const [treeJson, _] = huffman.convertToJSON(root);
+                            renderHuffmanTree(treeJson);
+                        }
+                    }
+                }
+            });
+            
+            const svgContainer = document.getElementById('treeVisualizationSvg');
+            if (svgContainer) {
+                observer.observe(svgContainer);
+            }
+        });
         function showAlert(message, type) {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
@@ -279,6 +692,19 @@
                 }
             }, 5000);
         }
+        
+        // Resize event listener to redraw tree on window resize
+        window.addEventListener('resize', function() {
+            const algorithm = document.getElementById('algorithm').value;
+            const inputData = document.getElementById('inputData').value;
+            
+            if (algorithm === 'huffman' && inputData && document.getElementById('huffmanTreeVisualization').style.display !== 'none') {
+                const huffman = new HuffmanTree();
+                const root = huffman.buildHuffmanTree(inputData);
+                const [treeJson, _] = huffman.convertToJSON(root);
+                renderHuffmanTree(treeJson);
+            }
+        });
     </script>
 </body>
 

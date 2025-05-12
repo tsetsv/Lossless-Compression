@@ -73,60 +73,68 @@ def run_length_encoding(data):
 # Huffman Coding
 def huffman_coding(data):
     from collections import Counter
-    from heapq import heappush, heappop, heapify
+    import heapq
+    
+    class HuffmanNode:
+        def __init__(self, char, freq):
+            self.char = char
+            self.freq = freq
+            self.left = None
+            self.right = None
+        
+        def __lt__(self, other):
+            return self.freq < other.freq
     
     extra_info = f"Анхны өгөгдөл: {data}\n"
-    extra_info += "1. Тэмдэгтийн давталтыг тоолно\n"
+    extra_info += "Тэмдэгтийн давталт\n"
     
-    freq = Counter(data)
-    heap = [[weight, [char, ""]] for char, weight in freq.items()]
+    freq_map = Counter(data)
     
-    for a in heap:
-        extra_info += f"{a[1][0]} тэмдэгт {a[0]} удаа\n"
+    for char, count in freq_map.items():
+        extra_info += f"{char} тэмдэгт {count} удаа\n"
     
-    heapify(heap)
-    extra_info += "\n2. Хамгийн багуудыг холбоод холбоод мод үүсгэнэ\n"
+    heap = []
+    for char, freq in freq_map.items():
+        heapq.heappush(heap, HuffmanNode(char, freq))
+    
+
+    if len(heap) == 1:
+        node = heapq.heappop(heap)
+        node.left = HuffmanNode(None, 0)  
+        heapq.heappush(heap, node)
     
     while len(heap) > 1:
-        lo = heappop(heap)
-        hi = heappop(heap)
-        
-        extra_info += f"\nХослол:\n"
-        extra_info += f"\t{lo[0]} давталттай "
-        
-        for pair in lo[1:]:
-            extra_info += f"'{pair[1]}' замтай {pair[0]}, "
-        extra_info = extra_info.rstrip(", ") + "\n"
-        
-        extra_info += f"\t{hi[0]} давталттай "
-       
-        for pair in hi[1:]:
-            extra_info += f"'{pair[1]}' замтай {pair[0]}, "
-        extra_info = extra_info.rstrip(", ") + "\n"
-
-         # Combine the nodes
-        combined = [lo[0] + hi[0]] + lo[1:] + hi[1:]
-        extra_info += f"\n\tЭдгээр нь нийлээд {combined[0]} давталттай зангилаа болно.\n\n"
-        
-        for pair in lo[1:]:
-            extra_info += f"\t{pair[0]}-ийн шинэ зам 0{pair[1]}\n"
-            pair[1] = "0" + pair[1]
-            
-        for pair in hi[1:]:
-            extra_info += f"\t{pair[0]}-ийн шинэ зам 1{pair[1]}\n"
-            pair[1] = "1" + pair[1]
-        
-        heappush(heap, combined)
-
-    huffman_tree = sorted(heappop(heap)[1:], key=lambda p: (len(p[-1]), p))
-    extra_info += "\n\n3. Тэмдэгт бүрийн хоёрт кодчилол:\n"
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
     
-    for pair in huffman_tree:
-        extra_info += f"{pair[0]}: {pair[1]}\n"
+        internal = HuffmanNode(None, left.freq + right.freq)
+        internal.left = left
+        internal.right = right
+        
+        heapq.heappush(heap, internal)
     
-    encoded = "".join(dict(huffman_tree)[char] for char in data)
-    extra_info += f"\n4. Эцсийн хувиргалт: {encoded}\n"
+    root = heap[0]
+    
+    codes = {}
+    
+    def generate_codes(node, code=""):
+        if node:
+            if node.char is not None: 
+                codes[node.char] = code
+            generate_codes(node.left, code + "0")
+            generate_codes(node.right, code + "1")
+    
+    generate_codes(root)
+    
+    for char, code in sorted(codes.items()):
+        extra_info += f"{char}: {code}\n"
+    
+    encoded = "".join(codes[char] for char in data)
     extra_info += "\nЭнэ алгоритм нь олон давталттай тэмдэгтэд богино код, цөөн давталттай тэмдэгтэд урт код өгөх зарчмаар ажилладаг."
+    
+    huffman_tree = []
+    for char, code in codes.items():
+        huffman_tree.append([char, code])
     
     return encoded, huffman_tree, extra_info
 
